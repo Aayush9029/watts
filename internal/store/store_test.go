@@ -33,9 +33,6 @@ func TestInsertSample(t *testing.T) {
 		Processes: []model.ProcessRecord{
 			{Rank: 1, PID: 123, Name: "Safari"},
 		},
-		RawPayloads: []model.RawPayload{
-			{Source: "pmset", Format: "text", Payload: "raw"},
-		},
 		CollectorInfo: model.CollectorInfo{Version: "test"},
 	}
 

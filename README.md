@@ -1,15 +1,11 @@
 # watts
 
-Background battery and power logger for macOS.
+Figure out what is actually draining your MacBook battery.
 
 ## Installation
 
 ```bash
 brew install aayush9029/tap/watts
-
-# or
-brew tap aayush9029/tap
-brew install watts
 ```
 
 ## Usage
@@ -37,16 +33,5 @@ sqlite3 ~/.config/watts/data.sqlite ".tables"
 
 1. `watts install` writes `~/.config/watts/config.json` for one user and installs a root `launchd` daemon.
 2. The daemon samples `pmset`, `ioreg`, and `powermetrics` every 30 seconds.
-3. Each sample is normalized into SQLite tables for system power, battery state, and top process activity.
-4. Raw command payloads are also stored so later analysis can re-parse or enrich old samples.
-
-## Requirements
-
-- macOS on Apple silicon
-- Root privileges for `install`, `start`, `stop`, `restart`, `once`, and the daemon
-- `powermetrics`, `pmset`, `ioreg`, `plutil`, and `sqlite3` available from macOS
-- Local development: `go build -o watts`
-
-## License
-
-MIT
+3. Each sample is stored as structured SQLite rows for battery state, system power, and the top 10 processes.
+4. You can query the database directly later to chart trends and find the culprits.

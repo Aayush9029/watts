@@ -89,16 +89,12 @@ func (s *Store) init() error {
 			energy_impact REAL,
 			cpu_ms_per_s REAL,
 			user_percent REAL,
+			deadline_lt_2ms_per_s REAL,
+			deadline_2_to_5ms_per_s REAL,
+			wakeups_intr_per_s REAL,
+			wakeups_pkg_idle_per_s REAL,
 			cpu_percent REAL,
-			memory_percent REAL,
-			raw_columns_json TEXT
-		);`,
-		`CREATE TABLE IF NOT EXISTS sample_raw (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			sample_id INTEGER NOT NULL REFERENCES samples(id) ON DELETE CASCADE,
-			source TEXT NOT NULL,
-			payload_format TEXT NOT NULL,
-			payload TEXT NOT NULL
+			memory_percent REAL
 		);`,
 		`CREATE TABLE IF NOT EXISTS meta (
 			key TEXT PRIMARY KEY,
@@ -106,7 +102,7 @@ func (s *Store) init() error {
 		);`,
 		`CREATE INDEX IF NOT EXISTS idx_samples_unix_ts ON samples(unix_ts);`,
 		`CREATE INDEX IF NOT EXISTS idx_sample_processes_sample_id ON sample_processes(sample_id);`,
-		`INSERT INTO meta(key, value) VALUES('schema_version', '1') ON CONFLICT(key) DO NOTHING;`,
+		`INSERT INTO meta(key, value) VALUES('schema_version', '2') ON CONFLICT(key) DO NOTHING;`,
 	}
 
 	for _, stmt := range stmts {
@@ -175,9 +171,10 @@ func (s *Store) InsertSample(ctx context.Context, record model.Record) (int64, e
 	for _, process := range record.Processes {
 		_, err = tx.ExecContext(ctx, `INSERT INTO sample_processes (
 			sample_id, rank, pid, name, executable_path, app_name, bundle_path, bundle_id,
-			is_app, energy_impact, cpu_ms_per_s, user_percent, cpu_percent, memory_percent,
-			raw_columns_json
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			is_app, energy_impact, cpu_ms_per_s, user_percent, deadline_lt_2ms_per_s,
+			deadline_2_to_5ms_per_s, wakeups_intr_per_s, wakeups_pkg_idle_per_s,
+			cpu_percent, memory_percent
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			sampleID,
 			process.Rank,
 			process.PID,
@@ -190,18 +187,12 @@ func (s *Store) InsertSample(ctx context.Context, record model.Record) (int64, e
 			dbFloat(process.EnergyImpact),
 			dbFloat(process.CPUMsPerSec),
 			dbFloat(process.UserPercent),
+			dbFloat(process.DeadlineLT2MSPerSec),
+			dbFloat(process.Deadline2To5MSPerSec),
+			dbFloat(process.WakeupsIntrPerSec),
+			dbFloat(process.WakeupsPkgIdlePerSec),
 			dbFloat(process.CPUPct),
 			dbFloat(process.MemoryPct),
-			process.RawColumnsJSON,
-		)
-		if err != nil {
-			return 0, err
-		}
-	}
-
-	for _, payload := range record.RawPayloads {
-		_, err = tx.ExecContext(ctx, `INSERT INTO sample_raw (sample_id, source, payload_format, payload) VALUES (?, ?, ?, ?)`,
-			sampleID, payload.Source, payload.Format, payload.Payload,
 		)
 		if err != nil {
 			return 0, err

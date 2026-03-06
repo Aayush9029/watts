@@ -28,16 +28,18 @@ type Snapshot struct {
 	BatteryPercent    *float64
 	BrightnessPercent *float64
 	Processes         []ProcessSample
-	RawText           string
 }
 
 type ProcessSample struct {
-	Name         string
-	PID          int
-	EnergyImpact *float64
-	CPUMsPerSec  *float64
-	UserPercent  *float64
-	RawColumns   map[string]string
+	Name                 string
+	PID                  int
+	EnergyImpact         *float64
+	CPUMsPerSec          *float64
+	UserPercent          *float64
+	DeadlineLT2MSPerSec  *float64
+	Deadline2To5MSPerSec *float64
+	WakeupsIntrPerSec    *float64
+	WakeupsPkgIdlePerSec *float64
 }
 
 func Collect(ctx context.Context) (Snapshot, error) {
@@ -60,9 +62,7 @@ func Collect(ctx context.Context) (Snapshot, error) {
 }
 
 func ParseText(raw string) (Snapshot, error) {
-	snapshot := Snapshot{
-		RawText: strings.TrimSpace(raw),
-	}
+	snapshot := Snapshot{}
 
 	if matches := elapsedMSRE.FindStringSubmatch(raw); len(matches) == 2 {
 		if value, err := strconv.ParseFloat(matches[1], 64); err == nil {
@@ -195,9 +195,8 @@ func parseProcessLine(headers []string, line string) (ProcessSample, bool) {
 
 	pid := parsePID(rawColumns)
 	process := ProcessSample{
-		Name:       name,
-		PID:        pid,
-		RawColumns: rawColumns,
+		Name: name,
+		PID:  pid,
 	}
 
 	if value, ok := parseFloatColumn(rawColumns, "Energy"); ok {
@@ -241,24 +240,33 @@ func parseTaskEnergyLine(line string) (ProcessSample, bool) {
 	if !ok {
 		return ProcessSample{}, false
 	}
-
-	rawColumns := map[string]string{
-		"Name":                      name,
-		"ID":                        matches[2],
-		"CPU ms/s":                  matches[3],
-		"User%":                     matches[4],
-		"Deadlines (<2 ms, 2-5 ms)": matches[5] + " " + matches[6],
-		"Wakeups (Intr, Pkg idle)":  matches[7] + " " + matches[8],
-		"Energy Impact":             matches[9],
+	deadlineLT2MS, ok := mustParseFloat(matches[5])
+	if !ok {
+		return ProcessSample{}, false
+	}
+	deadline2To5MS, ok := mustParseFloat(matches[6])
+	if !ok {
+		return ProcessSample{}, false
+	}
+	wakeupsIntr, ok := mustParseFloat(matches[7])
+	if !ok {
+		return ProcessSample{}, false
+	}
+	wakeupsPkgIdle, ok := mustParseFloat(matches[8])
+	if !ok {
+		return ProcessSample{}, false
 	}
 
 	return ProcessSample{
-		Name:         name,
-		PID:          pid,
-		EnergyImpact: &energy,
-		CPUMsPerSec:  &cpuMs,
-		UserPercent:  &userPct,
-		RawColumns:   rawColumns,
+		Name:                 name,
+		PID:                  pid,
+		EnergyImpact:         &energy,
+		CPUMsPerSec:          &cpuMs,
+		UserPercent:          &userPct,
+		DeadlineLT2MSPerSec:  &deadlineLT2MS,
+		Deadline2To5MSPerSec: &deadline2To5MS,
+		WakeupsIntrPerSec:    &wakeupsIntr,
+		WakeupsPkgIdlePerSec: &wakeupsPkgIdle,
 	}, true
 }
 

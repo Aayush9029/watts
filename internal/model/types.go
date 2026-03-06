@@ -8,7 +8,6 @@ type Record struct {
 	Battery       BatterySample
 	System        SystemSample
 	Processes     []ProcessRecord
-	RawPayloads   []RawPayload
 	CollectorInfo CollectorInfo
 }
 
@@ -43,26 +42,23 @@ type SystemSample struct {
 }
 
 type ProcessRecord struct {
-	Rank           int
-	PID            int
-	Name           string
-	ExecutablePath string
-	AppName        string
-	BundlePath     string
-	BundleID       string
-	IsApp          bool
-	EnergyImpact   *float64
-	CPUMsPerSec    *float64
-	UserPercent    *float64
-	CPUPct         *float64
-	MemoryPct      *float64
-	RawColumnsJSON string
-}
-
-type RawPayload struct {
-	Source  string
-	Format  string
-	Payload string
+	Rank                 int
+	PID                  int
+	Name                 string
+	ExecutablePath       string
+	AppName              string
+	BundlePath           string
+	BundleID             string
+	IsApp                bool
+	EnergyImpact         *float64
+	CPUMsPerSec          *float64
+	UserPercent          *float64
+	DeadlineLT2MSPerSec  *float64
+	Deadline2To5MSPerSec *float64
+	WakeupsIntrPerSec    *float64
+	WakeupsPkgIdlePerSec *float64
+	CPUPct               *float64
+	MemoryPct            *float64
 }
 
 type CollectorInfo struct {

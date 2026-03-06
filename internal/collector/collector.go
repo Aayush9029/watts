@@ -2,7 +2,6 @@ package collector
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"sort"
@@ -46,11 +45,6 @@ func CollectOnce(ctx context.Context, cfg config.Config, version string) (model.
 			BrightnessPercent:      coalesceFloat(batterySnapshot.Sample.BrightnessPercent, powerSnapshot.BrightnessPercent),
 		},
 		Processes: processes,
-		RawPayloads: []model.RawPayload{
-			{Source: "pmset", Format: "text", Payload: batterySnapshot.PMSetRaw},
-			{Source: "ioreg", Format: "json", Payload: batterySnapshot.IORegRawJSON},
-			{Source: "powermetrics", Format: "text", Payload: powerSnapshot.RawText},
-		},
 		CollectorInfo: model.CollectorInfo{
 			Version:      version,
 			TopProcesses: len(processes),
@@ -129,19 +123,17 @@ func enrichProcesses(ctx context.Context, input []power.ProcessSample, limit int
 
 	records := make([]model.ProcessRecord, 0, len(selected))
 	for idx, process := range selected {
-		rawJSON, err := json.Marshal(process.RawColumns)
-		if err != nil {
-			return nil, fmt.Errorf("marshal process raw columns: %w", err)
-		}
-
 		record := model.ProcessRecord{
-			Rank:           idx + 1,
-			PID:            process.PID,
-			Name:           process.Name,
-			EnergyImpact:   process.EnergyImpact,
-			CPUMsPerSec:    process.CPUMsPerSec,
-			UserPercent:    process.UserPercent,
-			RawColumnsJSON: string(rawJSON),
+			Rank:                 idx + 1,
+			PID:                  process.PID,
+			Name:                 process.Name,
+			EnergyImpact:         process.EnergyImpact,
+			CPUMsPerSec:          process.CPUMsPerSec,
+			UserPercent:          process.UserPercent,
+			DeadlineLT2MSPerSec:  process.DeadlineLT2MSPerSec,
+			Deadline2To5MSPerSec: process.Deadline2To5MSPerSec,
+			WakeupsIntrPerSec:    process.WakeupsIntrPerSec,
+			WakeupsPkgIdlePerSec: process.WakeupsPkgIdlePerSec,
 		}
 		if meta, ok := metaByPID[process.PID]; ok {
 			record.ExecutablePath = meta.ExecutablePath

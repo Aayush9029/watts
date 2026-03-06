@@ -8,10 +8,10 @@ func TestParseText(t *testing.T) {
 
 *** Running tasks ***
 
-Name                               ID     Energy Impact  CPU ms/s  User%
-Safari                             123    23.5           65.0      82.0
-kernel_task                        0      12.0           40.0      0.0
-ALL_TASKS                          -2     35.5           105.0     45.0
+Name                               ID     CPU ms/s  User%  Deadlines (<2 ms, 2-5 ms)  Wakeups (Intr, Pkg idle)  Energy Impact
+Safari                             123    65.0      82.0   0.0     0.0                0.0     0.0               23.5
+kernel_task                        0      40.0      0.0    1.0     0.5                10.0    1.0               12.0
+ALL_TASKS                          -2     105.0     45.0   1.0     0.5                10.0    1.0               35.5
 
 **** Battery and backlight usage ****
 
@@ -39,6 +39,15 @@ Combined Power (CPU + GPU + ANE): 1700 mW
 	}
 	if snapshot.Processes[0].Name != "Safari" {
 		t.Fatalf("first process = %q, want Safari", snapshot.Processes[0].Name)
+	}
+	if snapshot.Processes[0].PID != 123 {
+		t.Fatalf("first pid = %d, want 123", snapshot.Processes[0].PID)
+	}
+	if snapshot.Processes[0].DeadlineLT2MSPerSec == nil || *snapshot.Processes[0].DeadlineLT2MSPerSec != 0 {
+		t.Fatalf("deadline lt2 = %v, want 0", snapshot.Processes[0].DeadlineLT2MSPerSec)
+	}
+	if snapshot.Processes[0].WakeupsIntrPerSec == nil || *snapshot.Processes[0].WakeupsIntrPerSec != 0 {
+		t.Fatalf("wakeups intr = %v, want 0", snapshot.Processes[0].WakeupsIntrPerSec)
 	}
 	if snapshot.CPUPowerW == nil || *snapshot.CPUPowerW != 1.5 {
 		t.Fatalf("CPUPowerW = %v, want 1.5", snapshot.CPUPowerW)
