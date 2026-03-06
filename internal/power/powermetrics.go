@@ -164,11 +164,16 @@ func parseProcessorSection(snapshot *Snapshot, line string) {
 }
 
 func parseProcessLine(headers []string, line string) (ProcessSample, bool) {
-	if process, ok := parseTaskEnergyLine(line); ok {
+	trimmed := strings.TrimSpace(line)
+	if strings.HasPrefix(trimmed, "ALL_TASKS") || strings.HasPrefix(trimmed, "DEAD_TASKS") {
+		return ProcessSample{}, false
+	}
+
+	if process, ok := parseTaskEnergyLine(trimmed); ok {
 		return process, true
 	}
 
-	fields := splitColumns(line)
+	fields := splitColumns(trimmed)
 	if len(fields) < len(headers) {
 		return ProcessSample{}, false
 	}
