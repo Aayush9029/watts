@@ -39,6 +39,12 @@ type SystemSample struct {
 	CombinedPowerW         *float64
 	BatteryPercent         *float64
 	BrightnessPercent      *float64
+	TemperatureC           *float64
+	MaxTemperatureC        *float64
+	TemperatureSensorCount *int
+	FanCount               *int
+	LeftFanRPM             *float64
+	RightFanRPM            *float64
 }
 
 type ProcessRecord struct {

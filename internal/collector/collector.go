@@ -10,6 +10,7 @@ import (
 	"github.com/Aayush9029/watts/internal/appmeta"
 	"github.com/Aayush9029/watts/internal/battery"
 	"github.com/Aayush9029/watts/internal/config"
+	"github.com/Aayush9029/watts/internal/hwmon"
 	"github.com/Aayush9029/watts/internal/model"
 	"github.com/Aayush9029/watts/internal/power"
 	"github.com/Aayush9029/watts/internal/store"
@@ -24,6 +25,11 @@ func CollectOnce(ctx context.Context, cfg config.Config, version string) (model.
 	powerSnapshot, err := power.Collect(ctx)
 	if err != nil {
 		return model.Record{}, err
+	}
+
+	hwmonSnapshot, err := hwmon.Collect()
+	if err != nil {
+		log.Printf("hardware sensor collection failed: %v", err)
 	}
 
 	processes, err := enrichProcesses(ctx, powerSnapshot.Processes, cfg.TopProcesses)
@@ -43,6 +49,12 @@ func CollectOnce(ctx context.Context, cfg config.Config, version string) (model.
 			CombinedPowerW:         powerSnapshot.CombinedPowerW,
 			BatteryPercent:         powerSnapshot.BatteryPercent,
 			BrightnessPercent:      coalesceFloat(batterySnapshot.Sample.BrightnessPercent, powerSnapshot.BrightnessPercent),
+			TemperatureC:           hwmonSnapshot.TemperatureC,
+			MaxTemperatureC:        hwmonSnapshot.MaxTemperatureC,
+			TemperatureSensorCount: hwmonSnapshot.TemperatureSensorCount,
+			FanCount:               hwmonSnapshot.FanCount,
+			LeftFanRPM:             hwmonSnapshot.LeftFanRPM,
+			RightFanRPM:            hwmonSnapshot.RightFanRPM,
 		},
 		Processes: processes,
 		CollectorInfo: model.CollectorInfo{

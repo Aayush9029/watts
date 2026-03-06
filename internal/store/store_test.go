@@ -19,6 +19,9 @@ func TestInsertSample(t *testing.T) {
 
 	pct := 82.0
 	cpuPower := 2.2
+	temp := 58.4
+	leftFan := 1890.0
+	fanCount := 2
 	record := model.Record{
 		CollectedAt: time.Date(2026, 3, 5, 23, 15, 0, 0, time.UTC),
 		PowerSource: "battery",
@@ -28,7 +31,10 @@ func TestInsertSample(t *testing.T) {
 			State:       "discharging",
 		},
 		System: model.SystemSample{
-			CPUPowerW: &cpuPower,
+			CPUPowerW:    &cpuPower,
+			TemperatureC: &temp,
+			LeftFanRPM:   &leftFan,
+			FanCount:     &fanCount,
 		},
 		Processes: []model.ProcessRecord{
 			{Rank: 1, PID: 123, Name: "Safari"},

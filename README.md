@@ -32,6 +32,6 @@ sqlite3 ~/.config/watts/data.sqlite ".tables"
 ## How It Works
 
 1. `watts install` writes `~/.config/watts/config.json` for one user and installs a root `launchd` daemon.
-2. The daemon samples `pmset`, `ioreg`, and `powermetrics` every 30 seconds.
-3. Each sample is stored as structured SQLite rows for battery state, system power, and the top 10 processes.
+2. The daemon samples `pmset`, `ioreg`, `powermetrics`, and hardware sensors for temperature plus fan RPM every 30 seconds.
+3. Each sample is stored as structured SQLite rows for battery state, system power, thermals, fan speed, and the top 10 processes.
 4. You can query the database directly later to chart trends and find the culprits.

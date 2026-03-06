@@ -71,6 +71,12 @@ func (s *Store) init() error {
 			gpu_power_w REAL,
 			ane_power_w REAL,
 			combined_power_w REAL,
+			temperature_c REAL,
+			max_temperature_c REAL,
+			temperature_sensor_count INTEGER,
+			fan_count INTEGER,
+			left_fan_rpm REAL,
+			right_fan_rpm REAL,
 			powermetrics_duration_ms REAL,
 			top_process_count INTEGER NOT NULL DEFAULT 0,
 			collector_version TEXT
@@ -102,13 +108,15 @@ func (s *Store) init() error {
 		);`,
 		`CREATE INDEX IF NOT EXISTS idx_samples_unix_ts ON samples(unix_ts);`,
 		`CREATE INDEX IF NOT EXISTS idx_sample_processes_sample_id ON sample_processes(sample_id);`,
-		`INSERT INTO meta(key, value) VALUES('schema_version', '2') ON CONFLICT(key) DO NOTHING;`,
 	}
 
 	for _, stmt := range stmts {
 		if _, err := s.db.Exec(stmt); err != nil {
 			return err
 		}
+	}
+	if err := s.ensureLatestSchema(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -129,9 +137,10 @@ func (s *Store) InsertSample(ctx context.Context, record model.Record) (int64, e
 		external_connected, time_remaining_minutes, cycle_count, voltage_mv, amperage_ma,
 		adapter_watts, current_capacity_mah, max_capacity_mah, design_capacity_mah,
 		battery_power_w, charge_power_w, discharge_power_w, brightness_percent,
-		cpu_power_w, gpu_power_w, ane_power_w, combined_power_w, powermetrics_duration_ms,
-		top_process_count, collector_version
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		cpu_power_w, gpu_power_w, ane_power_w, combined_power_w,
+		temperature_c, max_temperature_c, temperature_sensor_count, fan_count, left_fan_rpm, right_fan_rpm,
+		powermetrics_duration_ms, top_process_count, collector_version
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		record.CollectedAt.UTC().Format(time.RFC3339),
 		record.CollectedAt.UTC().Unix(),
 		record.PowerSource,
@@ -155,6 +164,12 @@ func (s *Store) InsertSample(ctx context.Context, record model.Record) (int64, e
 		dbFloat(record.System.GPUPowerW),
 		dbFloat(record.System.ANEPowerW),
 		dbFloat(record.System.CombinedPowerW),
+		dbFloat(record.System.TemperatureC),
+		dbFloat(record.System.MaxTemperatureC),
+		dbInt(record.System.TemperatureSensorCount),
+		dbInt(record.System.FanCount),
+		dbFloat(record.System.LeftFanRPM),
+		dbFloat(record.System.RightFanRPM),
 		dbFloat(record.System.PowermetricsDurationMS),
 		len(record.Processes),
 		record.CollectorInfo.Version,
@@ -219,6 +234,66 @@ func (s *Store) LastSampleTimestamp(ctx context.Context) (*time.Time, error) {
 		return nil, fmt.Errorf("parse last sample timestamp: %w", err)
 	}
 	return &ts, nil
+}
+
+func (s *Store) ensureLatestSchema() error {
+	type column struct {
+		name string
+		ddl  string
+	}
+
+	required := []column{
+		{name: "temperature_c", ddl: "REAL"},
+		{name: "max_temperature_c", ddl: "REAL"},
+		{name: "temperature_sensor_count", ddl: "INTEGER"},
+		{name: "fan_count", ddl: "INTEGER"},
+		{name: "left_fan_rpm", ddl: "REAL"},
+		{name: "right_fan_rpm", ddl: "REAL"},
+	}
+
+	for _, item := range required {
+		ok, err := s.hasColumn("samples", item.name)
+		if err != nil {
+			return err
+		}
+		if ok {
+			continue
+		}
+		stmt := fmt.Sprintf("ALTER TABLE samples ADD COLUMN %s %s", item.name, item.ddl)
+		if _, err := s.db.Exec(stmt); err != nil {
+			return err
+		}
+	}
+
+	_, err := s.db.Exec(`INSERT INTO meta(key, value) VALUES('schema_version', '3')
+		ON CONFLICT(key) DO UPDATE SET value=excluded.value`)
+	return err
+}
+
+func (s *Store) hasColumn(table string, column string) (bool, error) {
+	rows, err := s.db.Query(fmt.Sprintf("PRAGMA table_info(%s)", table))
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			cid        int
+			name       string
+			kind       string
+			notNull    int
+			defaultVal any
+			primaryKey int
+		)
+		if err := rows.Scan(&cid, &name, &kind, &notNull, &defaultVal, &primaryKey); err != nil {
+			return false, err
+		}
+		if name == column {
+			return true, nil
+		}
+	}
+	return false, rows.Err()
 }
 
 func boolToInt(v bool) int {
