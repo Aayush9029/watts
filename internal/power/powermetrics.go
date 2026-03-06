@@ -52,6 +52,9 @@ func Collect(ctx context.Context) (Snapshot, error) {
 	}
 	out, err := exec.CommandContext(ctx, "powermetrics", args...).CombinedOutput()
 	if err != nil {
+		if strings.Contains(string(out), "*** Sampled system activity") {
+			return ParseText(string(out))
+		}
 		msg := strings.TrimSpace(string(out))
 		if msg == "" {
 			msg = err.Error()
