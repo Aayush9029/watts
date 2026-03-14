@@ -1,3 +1,5 @@
+<img src="assets/icon.png" width="128" alt="watts">
+
 # watts
 
 Figure out what is actually draining your MacBook battery.
