@@ -1,13 +1,25 @@
-<img src="assets/icon.png" width="128" alt="watts">
+<p align="center">
+  <img src="assets/icon.png" width="128" alt="watts">
+  <h1 align="center">watts</h1>
+  <p align="center">Figure out what is actually draining your MacBook battery</p>
+</p>
 
-# watts
+<p align="center">
+  <a href="https://github.com/Aayush9029/watts/releases/latest"><img src="https://img.shields.io/github/v/release/Aayush9029/watts" alt="Release"></a>
+  <a href="https://github.com/Aayush9029/watts/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Aayush9029/watts" alt="License"></a>
+</p>
 
-Figure out what is actually draining your MacBook battery.
-
-## Installation
+## Install
 
 ```bash
 brew install aayush9029/tap/watts
+```
+
+Or tap first:
+
+```bash
+brew tap aayush9029/tap
+brew install watts
 ```
 
 ## Usage
@@ -17,23 +29,16 @@ sudo watts install --user "$USER"     # install + start boot daemon
 sudo watts status                     # service state + latest sample
 sudo watts tail                       # follow collector logs
 sudo watts once                       # run one foreground sample
-sudo watts restart                    # reload daemon after updating the binary
-sqlite3 ~/.config/watts/data.sqlite ".tables"
+sudo watts restart                    # reload daemon after updating
 ```
 
-## Options
+## How it works
 
-| Option | Description |
-| --- | --- |
-| `--user <name>` | Target macOS username for config and database paths |
-| `--interval <duration>` | Sampling interval for `install` (default: `30s`) |
-| `--top <n>` | Number of top processes to retain per sample (default: `10`) |
-| `--config <path>` | Override config path for `status`, `tail`, `once`, or internal daemon runs |
-| `-v`, `--version` | Show version |
+1. Installs a root `launchd` daemon that samples every 30 seconds
+2. Collects data from `pmset`, `ioreg`, `powermetrics`, and hardware sensors
+3. Stores structured SQLite rows for battery state, power, thermals, fan speed, and top processes
+4. Query the database directly to chart trends and find culprits
 
-## How It Works
+## License
 
-1. `watts install` writes `~/.config/watts/config.json` for one user and installs a root `launchd` daemon.
-2. The daemon samples `pmset`, `ioreg`, `powermetrics`, and hardware sensors for temperature plus fan RPM every 30 seconds.
-3. Each sample is stored as structured SQLite rows for battery state, system power, thermals, fan speed, and the top 10 processes.
-4. You can query the database directly later to chart trends and find the culprits.
+MIT
